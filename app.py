@@ -151,11 +151,10 @@ with tab2:
     if uploaded_pdf is not None:
         pdf_bytes = uploaded_pdf.read()
         
-        # Đọc thử ở mức 72 DPI rất nhẹ để đếm tổng số trang trong file PDF
         try:
             test_imgs = convert_from_bytes(pdf_bytes, dpi=72)
             tong_so_trang = len(test_imgs)
-            st.info(f"📄 Tìm thấy tổng cộng: **{tong_so_trang}** trang trong file PDF của bạn.")
+            st.info(f"📄 Tìm thấy tổng cộng: **{tong_so_trang}** trang trong file PDF.")
         except Exception as e:
             st.error(f"Không thể đọc file PDF. Lỗi: {str(e)}")
             tong_so_trang = 0
@@ -165,21 +164,16 @@ with tab2:
             with col1:
                 dinh_dang = st.selectbox("Định dạng ảnh đầu ra", ["PNG", "JPEG"])
             with col2:
-                # Sửa bằng hàm range để an toàn tuyệt đối và kéo mượt lên 600 DPI
-                cac_muc_dpi = list(range(100, 601, 100))
+                cac_muc_dpi = [100, 200, 300, 400, 500, 600]
                 muc_dpi = st.select_slider("Độ phân giải (DPI)", options=cac_muc_dpi, value=300)
             
-            # Tính năng lọc trang thông minh để tránh tràn bộ nhớ cloud
             che_do_chon = st.radio("Chế độ xuất ảnh:", ["Xuất toàn bộ các trang", "Chỉ xuất một vài trang cụ thể"])
-            
             danh_sach_trang_can_xuat = list(range(1, tong_so_trang + 1))
             
             if che_do_chon == "Chỉ xuất một vài trang cụ thể":
                 nhap_trang = st.text_input(f"Nhập số trang muốn xuất (Ví dụ: 1 hoặc 1,3,5). Giới hạn từ 1 đến {tong_so_trang}:", value="1")
                 try:
-                    # Tách chuỗi người dùng nhập thành mảng các số nguyên hợp lệ
                     danh_sach_trang_can_xuat = [int(p.strip()) for p in nhap_trang.split(",") if p.strip().isdigit()]
-                    # Loại bỏ các trang nằm ngoài phạm vi thực tế của file PDF
                     danh_sach_trang_can_xuat = [p for p in danh_sach_trang_can_xuat if 1 <= p <= tong_so_trang]
                 except:
                     st.warning("Định dạng số trang nhập vào chưa chuẩn, hệ thống mặc định chọn trang 1.")
@@ -190,7 +184,6 @@ with tab2:
             elif st.button("🚀 BẮT ĐẦU CHUYỂN ĐỔI"):
                 with st.spinner("Đang trích xuất ảnh chất lượng cao..."):
                     try:
-                        # Chỉ chuyển đổi đúng những trang người dùng yêu cầu để tối ưu hóa tốc độ
                         images = convert_from_bytes(
                             pdf_bytes, 
                             dpi=muc_dpi,
@@ -198,11 +191,30 @@ with tab2:
                             last_page=max(danh_sach_trang_can_xuat)
                         )
                         
-                        st.success(f"📸 Đã xử lý xong danh sách trang yêu cầu!")
+                        st.success("📸 Đã xử lý xong danh sách trang yêu cầu!")
                         
-                        # Hiển thị ảnh và nút tải xuống cho từng trang được chọn
-                        for idx_trang in danh_sach_trang_can_xuat:
-                            # Tính vị trí tương đối của trang trong mảng kết quả trích xuất
+                                                for idx_trang in danh_sach_trang_can_xuat:
                             idx_chuan = idx_trang - min(danh_sach_trang_can_xuat)
                             if idx_chuan < len(images):
                                 img = images[idx_chuan]
+                                img_buffer = io.BytesIO()
+                                img.save(img_buffer, format=dinh_dang)
+                                img_buffer.seek(0)
+                                
+                                # Gom gọn tham số thành biến ngắn để tránh gãy dòng chat
+                                cap = f"Trang {idx_trang} ({muc_dpi} DPI)"
+                                lbl = f"📥 Tải ảnh Trang {idx_trang} ({dinh_dang})"
+                                ext = dinh_dang.lower()
+                                f_name = f"trang_{idx_trang}_{muc_dpi}dpi.{ext}"
+                                m_type = f"image/{ext}"
+                                
+                                st.image(img, caption=cap, use_container_width=True)
+                                st.download_button(
+                                    label=lbl,
+                                    data=img_buffer,
+                                    file_name=f_name,
+                                    mime=m_type
+                                )
+                    except Exception as img_err:
+                        st.error(f"Lỗi trích xuất hình ảnh: {str(img_err)}")
+
