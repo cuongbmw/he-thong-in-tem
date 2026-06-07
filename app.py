@@ -161,32 +161,26 @@ with tab2:
         with col1:
             dinh_dang = st.selectbox("Định dạng ảnh đầu ra", ["PNG", "JPEG"])
         with col2:
-            muc_dpi = st.select_slider("Độ phân giải (DPI)", options=[100, 200, 300, 400, 500, 600], value=300)
+            cac_muc_dpi = [100, 200, 300, 400, 500, 600]
+            muc_dpi = st.select_slider("Độ phân giải (DPI)", options=cac_muc_dpi, value=300)
         
         che_do_chon = st.radio("Chế độ xuất ảnh:", ["Xuất toàn bộ các trang", "Chỉ xuất một vài trang cụ thể"])
         danh_sach_trang_can_xuat = list(range(1, tong_so_trang + 1))
         
-                if che_do_chon == "Chỉ xuất một vài trang cụ thể":
+        if che_do_chon == "Chỉ xuất một vài trang cụ thể":
             nhap_trang = st.text_input(f"Nhập số trang muốn xuất (Ví dụ: 1-5 hoặc 1,3,5-8). Giới hạn từ 1 đến {tong_so_trang}:", value="1-5")
             try:
-                # Tạo mảng rỗng để hứng danh sách trang hợp lệ
                 trang_parsed = []
-                # Tách chuỗi theo dấu phẩy trước
                 for m_part in nhap_trang.split(","):
                     m_part = m_part.strip()
                     if "-" in m_part:
-                        # Nếu chứa dấu gạch ngang (ví dụ 1-5), tách lấy số đầu và số cuối
                         sub_parts = [p.strip() for p in m_part.split("-") if p.strip().isdigit()]
                         if len(sub_parts) == 2:
                             start_p, end_p = int(sub_parts[0]), int(sub_parts[1])
-                            # Đảm bảo dải số hợp lệ (số đầu nhỏ hơn hoặc bằng số cuối)
                             if start_p <= end_p:
                                 trang_parsed.extend(list(range(start_p, end_p + 1)))
                     elif m_part.isdigit():
-                        # Nếu chỉ là một số đơn lẻ (ví dụ 7)
                         trang_parsed.append(int(m_part))
-                
-                # Loại bỏ các số trang bị trùng và lọc số nằm ngoài phạm vi PDF thực tế
                 danh_sach_trang_can_xuat = sorted(list(set([p for p in trang_parsed if 1 <= p <= tong_so_trang])))
             except:
                 st.warning("Định dạng nhập chưa chuẩn, tự động chọn từ trang 1 đến trang 5.")
