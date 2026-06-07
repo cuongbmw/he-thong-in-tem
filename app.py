@@ -153,8 +153,8 @@ with tab2:
     with col1:
         dinh_dang = st.selectbox("Định dạng ảnh đầu ra", ["PNG", "JPEG"])
     with col2:
-        # Sửa lỗi: Điền đầy đủ danh sách lựa chọn DPI cho thanh trượt
-        muc_dpi = st.select_slider("Độ phân giải (DPI)", options=[100, 150, 200, 300, 400], value=300)
+        # ĐÃ FIX: Danh sách DPI đầy đủ, hỗ trợ lên tới 600 DPI siêu nét
+        muc_dpi = st.select_slider("Độ phân giải (DPI)", options=[100, 150, 200, 300, 400, 500, 600], value=300)
         
     if uploaded_pdf is not None:
         if st.button("🚀 BẮT ĐẦU CHUYỂN ĐỔI"):
