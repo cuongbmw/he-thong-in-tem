@@ -30,7 +30,6 @@ def tai_va_dang_ky_font():
         return 'Arial-VN-Bold', 'Arial-VN'
     except Exception: return 'Helvetica-Bold', 'Helvetica'
 
-# --- GIỮ NGUYÊN CÁC HÀM NGẮT DÒNG VÀ XỬ LÝ IN TEM CŨ ---
 def ngat_dong_tu_dong_theo_chieu_rong(txt, c, font_name, font_size, max_width_mm):
     txt = str(txt).strip().upper()
     max_width_points = max_width_mm * mm
@@ -132,7 +131,6 @@ def xu_ly_in_tem_web(file_excel, font_bold, font_reg):
 # --- GIAO DIỆN CHÍNH ---
 st.title("🛠️ Trung Tâm Xử Lý Bản In")
 
-# Tạo thanh điều hướng Tab trên Web
 tab1, tab2 = st.tabs(["🏷️ Xuất Tem Từ Excel", "🖼️ Chuyển PDF Sang Ảnh"])
 
 with tab1:
@@ -151,23 +149,20 @@ with tab2:
     st.header("Chuyển Đổi PDF Sang Ảnh")
     uploaded_pdf = st.file_uploader("Kéo thả file PDF cần chuyển đổi", type=["pdf"], key="pdf_up")
     
-    # Các nút cấu hình thông số độ phân giải
     col1, col2 = st.columns(2)
     with col1:
         dinh_dang = st.selectbox("Định dạng ảnh đầu ra", ["PNG", "JPEG"])
     with col2:
-        muc_dpi = st.select_slider("Độ phân giải (DPI) - Số càng cao ảnh càng nét", options=[72, 96, 150, 200, 300, 400, 600], value=300)
+        # Sửa lỗi: Điền đầy đủ danh sách lựa chọn DPI cho thanh trượt
+        muc_dpi = st.select_slider("Độ phân giải (DPI)", options=[100, 150, 200, 300, 400], value=300)
         
     if uploaded_pdf is not None:
         if st.button("🚀 BẮT ĐẦU CHUYỂN ĐỔI"):
             with st.spinner("Đang chuyển đổi PDF thành ảnh..."):
                 try:
-                    # Chuyển đổi dữ liệu PDF sang danh sách ảnh PIL bằng độ phân giải DPI đã chọn
                     images = convert_from_bytes(uploaded_pdf.read(), dpi=muc_dpi)
-                    
                     st.success(f"📸 Đã chuyển đổi thành công {len(images)} trang ảnh!")
                     
-                    # Hiển thị và cho phép tải về từng trang ảnh
                     for i, img in enumerate(images):
                         img_buffer = io.BytesIO()
                         img.save(img_buffer, format=dinh_dang)
@@ -181,4 +176,4 @@ with tab2:
                             mime=f"image/{dinh_dang.lower()}"
                         )
                 except Exception as e:
-                    st.error(f"Có lỗi xảy ra: {str(e)}\nLưu ý: Có thể file PDF quá nặng hoặc vượt giới hạn bộ nhớ cloud.")
+                    st.error(f"Có lỗi xảy ra: {str(e)}")
