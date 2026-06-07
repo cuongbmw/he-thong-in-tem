@@ -7,51 +7,40 @@ from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+# Thêm thư viện chuyển đổi PDF sang ảnh
+from pdf2image import convert_from_bytes
 
-# Cấu hình tiêu đề trang web hiển thị trên trình duyệt
-st.set_page_config(page_title="Hệ Thống In Tem Tự Động", page_icon="🏷️", layout="centered")
+st.set_page_config(page_title="Hệ Thống Quản Lý In Ấn", page_icon="🏷️", layout="centered")
 
 @st.cache_resource
 def tai_va_dang_ky_font():
-    """Tải font Arial từ Internet về máy chủ web để không bị lỗi font Tiếng Việt"""
     font_dir = "fonts"
-    if not os.path.exists(font_dir):
-        os.makedirs(font_dir)
-        
+    if not os.path.exists(font_dir): os.makedirs(font_dir)
     font_reg_path = os.path.join(font_dir, "arial.ttf")
     font_bold_path = os.path.join(font_dir, "arialbd.ttf")
-    
-    # Tải file font nếu chưa tồn tại trên hosting
     if not os.path.exists(font_reg_path):
         r = requests.get("https://github.com")
-        with open(font_reg_path, "wb") as f:
-            f.write(r.content)
-            
+        with open(font_reg_path, "wb") as f: f.write(r.content)
     if not os.path.exists(font_bold_path):
         r = requests.get("https://github.com")
-        with open(font_bold_path, "wb") as f:
-            f.write(r.content)
-            
+        with open(font_bold_path, "wb") as f: f.write(r.content)
     try:
         pdfmetrics.registerFont(TTFont('Arial-VN', font_reg_path))
         pdfmetrics.registerFont(TTFont('Arial-VN-Bold', font_bold_path))
         return 'Arial-VN-Bold', 'Arial-VN'
-    except Exception:
-        return 'Helvetica-Bold', 'Helvetica'
+    except Exception: return 'Helvetica-Bold', 'Helvetica'
 
+# --- GIỮ NGUYÊN CÁC HÀM NGẮT DÒNG VÀ XỬ LÝ IN TEM CŨ ---
 def ngat_dong_tu_dong_theo_chieu_rong(txt, c, font_name, font_size, max_width_mm):
     txt = str(txt).strip().upper()
     max_width_points = max_width_mm * mm
-    if c.stringWidth(txt, font_name, font_size) <= max_width_points:
-        return txt, ""
+    if c.stringWidth(txt, font_name, font_size) <= max_width_points: return txt, ""
     words = txt.split()
     line1 = ""
     for i, word in enumerate(words):
         test_line = f"{line1} {word}".strip()
-        if c.stringWidth(test_line, font_name, font_size) <= max_width_points:
-            line1 = test_line
-        else:
-            return line1, " ".join(words[i:])
+        if c.stringWidth(test_line, font_name, font_size) <= max_width_points: line1 = test_line
+        else: return line1, " ".join(words[i:])
     mid = len(txt) // 2
     return txt[:mid], txt[mid:]
 
@@ -59,22 +48,14 @@ def ngat_dong_chu_dong_theo_dau_gach(txt):
     txt = str(txt).strip().upper()
     if '-' in txt:
         parts = txt.split('-', 1)
-        line1 = f"{parts[0].strip()} -"
-        line2 = parts[1].strip()
-        return line1, line2
+        return f"{parts[0].strip()} -", parts[1].strip()
     return txt, ""
 
 def xu_ly_in_tem_web(file_excel, font_bold, font_reg):
-    # Đọc file Excel từ bộ nhớ đệm (buffer) của trình duyệt
     df = pd.read_excel(file_excel, header=0).fillna('')
-    
-    # Tạo luồng lưu trữ file PDF trong bộ nhớ (Memory Buffer) thay vì lưu vào ổ cứng
     pdf_buffer = io.BytesIO()
-    
-    width_mm = 100 * mm
-    height_mm = 50 * mm
+    width_mm, height_mm = 100 * mm, 50 * mm
     c = canvas.Canvas(pdf_buffer, pagesize=(width_mm, height_mm))
-    
     so_tem = 0
     for index, row in df.iterrows():
         cot_A = str(row.get('DỰ ÁN', '')).strip()
@@ -85,53 +66,36 @@ def xu_ly_in_tem_web(file_excel, font_bold, font_reg):
         cot_F = str(row.get('H(mm)', '')).strip()
         cot_G = str(row.get('SỐ LƯỢNG CÁNH', '')).strip()
         cot_I = str(row.get('KB', '')).strip()
-        
-        if not cot_A and not cot_B and not cot_I:
-            continue
-
+        if not cot_A and not cot_B and not cot_I: continue
         c.setFont(font_bold, 17)
         c.drawCentredString(57 * mm, 40 * mm, cot_A.upper())
-        
         c.setFont(font_bold, 18)
         line1_B, line2_B = ngat_dong_tu_dong_theo_chieu_rong(cot_B, c, font_bold, 18, max_width_mm=75)
         if line2_B:
             c.drawCentredString(57 * mm, 33 * mm, line1_B)
             c.drawCentredString(57 * mm, 27 * mm, line2_B)
-        else:
-            c.drawCentredString(57 * mm, 30 * mm, line1_B)
-        
+        else: c.drawCentredString(57 * mm, 30 * mm, line1_B)
         le_trai_moi = 16
         c.setFont(font_reg, 8.5)
         line1_C, line2_C = ngat_dong_chu_dong_theo_dau_gach(cot_C)
         if line2_C:
             c.drawString(le_trai_moi * mm, 25 * mm, line1_C)
             c.drawString(le_trai_moi * mm, 21 * mm, line2_C)
-        else:
-            c.drawString(le_trai_moi * mm, 23 * mm, line1_C)
-            
+        else: c.drawString(le_trai_moi * mm, 23 * mm, line1_C)
         c.drawString(le_trai_moi * mm, 12 * mm, cot_D)
-        
         c.setFont(font_reg, 11)
         c.drawRightString(94 * mm, 24 * mm, cot_G)
-        
         c.setFont(font_reg, 12.5)
         vi_tri_khung_do = 45
         c.drawString(vi_tri_khung_do * mm, 18 * mm, cot_E)  
-        
         do_rong_chu_do_mm = c.stringWidth(cot_E, font_reg, 12.5) / mm
         vi_tri_khung_lam = vi_tri_khung_do + do_rong_chu_do_mm + 5
         c.drawString(vi_tri_khung_lam * mm, 18 * mm, cot_F)
-        
         do_dai_chuoi = len(cot_I)
-        if do_dai_chuoi > 18:
-            c.setFont(font_bold, 13)
-        elif do_dai_chuoi > 14:
-            c.setFont(font_bold, 15)
-        else:
-            c.setFont(font_bold, 18)
+        if do_dai_chuoi > 18: c.setFont(font_bold, 13)
+        elif do_dai_chuoi > 14: c.setFont(font_bold, 15)
+        else: c.setFont(font_bold, 18)
         c.drawCentredString(60 * mm, 4.5 * mm, cot_I)
-        
-        # --- VẼ KÝ TỰ VECTO "C-bmw" SIÊU NHỎ ---
         c.saveState()
         c.setStrokeColorRGB(0.72, 0.72, 0.72)
         c.setLineWidth(0.12)
@@ -159,36 +123,62 @@ def xu_ly_in_tem_web(file_excel, font_bold, font_reg):
         c.line(x_base + w*0.5, y_base + h/2, x_base + w*0.75, y_base)
         c.line(x_base + w*0.75, y_base, x_base + w, y_base + h/2)
         c.restoreState()
-        
         c.showPage()
         so_tem += 1
-        
     c.save()
     pdf_buffer.seek(0)
     return pdf_buffer, so_tem
 
-# --- GIAO DIỆN WEB hiển thị trên Streamlit ---
-st.title("🏷️ Hệ Thống Xuất Tem Tự Động")
-st.write("Kéo thả file dữ liệu Excel vào khung bên dưới để tự động tạo file PDF in tem chuẩn kích thước 100x50 mm.")
+# --- GIAO DIỆN CHÍNH ---
+st.title("🛠️ Trung Tâm Xử Lý Bản In")
 
-font_bold, font_reg = tai_va_dang_ky_font()
+# Tạo thanh điều hướng Tab trên Web
+tab1, tab2 = st.tabs(["🏷️ Xuất Tem Từ Excel", "🖼️ Chuyển PDF Sang Ảnh"])
 
-# Khung upload file Excel
-uploaded_file = st.file_uploader("Chọn file dữ liệu Excel (.xlsx, .xls)", type=["xlsx", "xls"])
+with tab1:
+    st.header("Tạo Tem Tự Động")
+    font_bold, font_reg = tai_va_dang_ky_font()
+    uploaded_excel = st.file_uploader("Kéo thả file Excel", type=["xlsx", "xls"], key="excel_up")
+    if uploaded_excel is not None:
+        with st.spinner("Đang xử lý..."):
+            try:
+                pdf_data, tong_so_tem = xu_ly_in_tem_web(uploaded_excel, font_bold, font_reg)
+                st.success(f"🎉 Đã xử lý thành công {tong_so_tem} tem.")
+                st.download_button(label="📥 TẢI FILE PDF IN TEM", data=pdf_data, file_name="tem_in.pdf", mime="application/pdf")
+            except Exception as e: st.error(f"Lỗi: {str(e)}")
 
-if uploaded_file is not None:
-    with st.spinner("Đang xử lý dữ liệu và tạo file tem..."):
-        try:
-            pdf_data, tong_so_tem = xu_ly_in_tem_web(uploaded_file, font_bold, font_reg)
-            
-            st.success(f"🎉 Đã xử lý thành công! Tổng số: **{tong_so_tem}** tem.")
-            
-            # Nút tải file PDF xuống trình duyệt
-            st.download_button(
-                label="📥 TẢI FILE PDF IN TEM VỀ MÁY",
-                data=pdf_data,
-                file_name=f"ket_qua_in_tem_{uploaded_file.name.split('.')[0]}.pdf",
-                mime="application/pdf"
-            )
-        except Exception as e:
-            st.error(f"❌ Có lỗi xảy ra khi xử lý file. Chi tiết: {str(e)}")
+with tab2:
+    st.header("Chuyển Đổi PDF Sang Ảnh")
+    uploaded_pdf = st.file_uploader("Kéo thả file PDF cần chuyển đổi", type=["pdf"], key="pdf_up")
+    
+    # Các nút cấu hình thông số độ phân giải
+    col1, col2 = st.columns(2)
+    with col1:
+        dinh_dang = st.selectbox("Định dạng ảnh đầu ra", ["PNG", "JPEG"])
+    with col2:
+        muc_dpi = st.select_slider("Độ phân giải (DPI) - Số càng cao ảnh càng nét", options=[72, 96, 150, 200, 300, 400, 600], value=300)
+        
+    if uploaded_pdf is not None:
+        if st.button("🚀 BẮT ĐẦU CHUYỂN ĐỔI"):
+            with st.spinner("Đang chuyển đổi PDF thành ảnh..."):
+                try:
+                    # Chuyển đổi dữ liệu PDF sang danh sách ảnh PIL bằng độ phân giải DPI đã chọn
+                    images = convert_from_bytes(uploaded_pdf.read(), dpi=muc_dpi)
+                    
+                    st.success(f"📸 Đã chuyển đổi thành công {len(images)} trang ảnh!")
+                    
+                    # Hiển thị và cho phép tải về từng trang ảnh
+                    for i, img in enumerate(images):
+                        img_buffer = io.BytesIO()
+                        img.save(img_buffer, format=dinh_dang)
+                        img_buffer.seek(0)
+                        
+                        st.image(img, caption=f"Trang {i+1} (DPI: {muc_dpi})", use_container_width=True)
+                        st.download_button(
+                            label=f"📥 Tải ảnh Trang {i+1} ({dinh_dang})",
+                            data=img_buffer,
+                            file_name=f"trang_{i+1}_{muc_dpi}dpi.{dinh_dang.lower()}",
+                            mime=f"image/{dinh_dang.lower()}"
+                        )
+                except Exception as e:
+                    st.error(f"Có lỗi xảy ra: {str(e)}\nLưu ý: Có thể file PDF quá nặng hoặc vượt giới hạn bộ nhớ cloud.")
